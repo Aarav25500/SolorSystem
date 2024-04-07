@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Solar System Simulation</title>
+<style>
+    body {
+        background-color: #000;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    canvas {
+        display: block;
+    }
+
+    .planet-label {
+        position: absolute;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+</style>
+</head>
+<body>
+<canvas id="solar-system"></canvas>
+<div id="planet-info" style="position: absolute; top: 10px; left: 10px; color: #fff; font-family: Arial, sans-serif;"></div>
+<div style="position: absolute; top: 10px; right: 10px;">
+    <button id="mercuryBtn" onclick="slowDownPlanet('Mercury')" ondblclick="adjustPlanet('Mercury')">Mercury</button>
+    <button id="venusBtn" onclick="slowDownPlanet('Venus')" ondblclick="adjustPlanet('Venus')">Venus</button>
+    <button id="earthBtn" onclick="slowDownPlanet('Earth')" ondblclick="adjustPlanet('Earth')">Earth</button>
+    <button id="marsBtn" onclick="slowDownPlanet('Mars')" ondblclick="adjustPlanet('Mars')">Mars</button>
+</div>
+<script>
+    const canvas = document.getElementById('solar-system');
+    const ctx = canvas.getContext('2d');
+
+    const sunRadius = 50;
+    const planets = [
+        { name: 'Mercury', radius: 10, distance: 100, speed: 0.005, color: '#d9d9d9', rotationSpeed: 0.03, moons: [] },
+        { name: 'Venus', radius: 15, distance: 150, speed: 0.003, color: '#ff9900', rotationSpeed: 0.02, moons: [] },
+        { name: 'Earth', radius: 20, distance: 200, speed: 0.002, color: '#33ccff', rotationSpeed: 0.015, moons: ['Moon'] },
+        { name: 'Mars', radius: 18, distance: 250, speed: 0.001, color: '#ff3300', rotationSpeed: 0.01, moons: ['Phobos', 'Deimos'] }
+    ];
+
+    let zoom = 1;
+
+    function draw() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw sun
+        ctx.fillStyle = '#ff0';
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, sunRadius * zoom, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw planets and moons
+        planets.forEach(planet => {
+            const angle = Date.now() * planet.speed;
+            const x = canvas.width / 2 + planet.distance * Math.cos(angle) * zoom;
+            const y = canvas.height / 2 + planet.distance * Math.sin(angle) * zoom;
+
+            // Draw orbit
+            ctx.strokeStyle = '#444';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, planet.distance * zoom, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw planet
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Date.now() * planet.rotationSpeed);
+            ctx.fillStyle = planet.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, planet.radius * zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Draw planet label
+            ctx.fillStyle = '#fff';
+            ctx.fillText(planet.name, x + planet.radius * zoom, y + planet.radius * zoom);
+
+            // Draw moons
+            if (planet.name === 'Earth') {
+                const moonDistance = 30;
+                const moonAngle = Date.now() * 0.001;
+                const moonX = x + moonDistance * Math.cos(moonAngle) * zoom;
+                const moonY = y + moonDistance * Math.sin(moonAngle) * zoom;
+
+                // Draw moon orbit
+                ctx.strokeStyle = '#444';
+                ctx.beginPath();
+                ctx.arc(x, y, moonDistance * zoom, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Draw moon
+                ctx.fillStyle = '#aaa';
+                ctx.beginPath();
+                ctx.arc(moonX, moonY, 5 * zoom, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    window.addEventListener('wheel', function(event) {
+        zoom += event.deltaY * -0.001;
+        zoom = Math.min(Math.max(0.5, zoom), 2);
+    });
+
+    function slowDownPlanet(planetName) {
+        const planet = planets.find(p => p.name === planetName);
+        planet.speed *= 0.1; // Adjust the factor as needed to slow down the planet's orbit
+    }
+
+    function adjustPlanet(planetName) {
+        const planet = planets.find(p => p.name === planetName);
+        
+        canvas.addEventListener('dblclick', function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            const angle = Math.atan2(mouseY - canvas.height / 2, mouseX - canvas.width / 2);
+            const distance = Math.sqrt((mouseX - canvas.width / 2) ** 2 + (mouseY - canvas.height / 2) ** 2) / zoom;
+            
+            const currentAngle = Math.atan2(planet.distance * Math.sin(Date.now() * planet.speed) * zoom, planet.distance * Math.cos(Date.now() * planet.speed) * zoom);
+
+            const newAngle = currentAngle + angle;
+
+            planet.distance = distance;
+            planet.speed = newAngle / (Math.PI * 2);
+        }, { once: true });
+    }
+</script>
+</body>
+</html>
